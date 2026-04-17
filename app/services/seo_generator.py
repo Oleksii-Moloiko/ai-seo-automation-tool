@@ -1,3 +1,4 @@
+import json
 import os
 
 from dotenv import load_dotenv
@@ -6,6 +7,15 @@ from openai import OpenAI
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+RESULTS_FILE = "data/results.json"
+
+
+def save_result(data: dict) -> None:
+    os.makedirs("data", exist_ok=True)
+
+    with open(RESULTS_FILE, "a", encoding="utf-8") as file:
+        file.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
 def build_fallback_response(keyword: str) -> dict:
@@ -76,7 +86,10 @@ Outline:
         )
 
         content = response.output_text
-        return parse_ai_output(keyword, content)
+        result = parse_ai_output(keyword, content)
 
     except Exception:
-        return build_fallback_response(keyword)
+        result = build_fallback_response(keyword)
+
+    save_result(result)
+    return result
