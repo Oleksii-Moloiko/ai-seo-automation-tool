@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.schemas.seo import KeywordRequest
+from app.schemas.seo import KeywordRequest, SEOResponse
 from app.services.seo_generator import generate_seo_content
 
 app = FastAPI(
@@ -20,7 +20,7 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.post("/generate")
+@app.post("/generate", response_model=SEOResponse)
 def generate_content(request: KeywordRequest):
     result = generate_seo_content(request.keyword)
     return result
