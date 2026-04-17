@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from app.exceptions import AIServiceError, StorageError
+
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -12,10 +14,13 @@ RESULTS_FILE = "data/results.json"
 
 
 def save_result(data: dict) -> None:
-    os.makedirs("data", exist_ok=True)
+    try:
+        os.makedirs("data", exist_ok=True)
 
-    with open(RESULTS_FILE, "a", encoding="utf-8") as file:
-        file.write(json.dumps(data, ensure_ascii=False) + "\n")
+        with open(RESULTS_FILE, "a", encoding="utf-8") as file:
+            file.write(json.dumps(data, ensure_ascii=False) + "\n")
+    except OSError as error:
+        raise StorageError("Failed to save SEO result") from error
 
 
 def build_fallback_response(keyword: str) -> dict:
@@ -64,7 +69,7 @@ def parse_ai_output(keyword: str, content: str) -> dict:
     }
 
 
-def generate_seo_content(keyword: str) -> dict:
+def request_ai_content(keyword: str) -> str:
     try:
         prompt = f"""
 Generate SEO content for the keyword: "{keyword}".
@@ -85,10 +90,17 @@ Outline:
             input=prompt
         )
 
-        content = response.output_text
-        result = parse_ai_output(keyword, content)
+        return response.output_text
 
-    except Exception:
+    except Exception as error:
+        raise AIServiceError("AI generation is currently unavailable") from error
+
+
+def generate_seo_content(keyword: str) -> dict:
+    try:
+        content = request_ai_content(keyword)
+        result = parse_ai_output(keyword, content)
+    except AIServiceError:
         result = build_fallback_response(keyword)
 
     save_result(result)

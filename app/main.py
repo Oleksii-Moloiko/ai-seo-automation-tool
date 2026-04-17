@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
+from app.exceptions import StorageError
 from app.schemas.seo import KeywordRequest, SEOResponse
 from app.services.seo_generator import generate_seo_content
 
@@ -22,5 +23,8 @@ def health_check():
 
 @app.post("/generate", response_model=SEOResponse)
 def generate_content(request: KeywordRequest):
-    result = generate_seo_content(request.keyword)
-    return result
+    try:
+        result = generate_seo_content(request.keyword)
+        return result
+    except StorageError as error:
+        raise HTTPException(status_code=500, detail=str(error))
