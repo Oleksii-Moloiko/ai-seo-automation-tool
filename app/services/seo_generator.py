@@ -8,18 +8,38 @@ from app.exceptions import AIServiceError, StorageError
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 RESULTS_FILE = "data/results.json"
+
+
+def get_openai_client() -> OpenAI:
+    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def save_result(data: dict) -> None:
     try:
         os.makedirs("data", exist_ok=True)
 
-        with open(RESULTS_FILE, "a", encoding="utf-8") as file:
-            file.write(json.dumps(data, ensure_ascii=False) + "\n")
-    except OSError as error:
+        if os.path.exists(RESULTS_FILE):
+            with open(RESULTS_FILE, "r", encoding="utf-8") as file:
+                raw_content = file.read().strip()
+
+            if not raw_content:
+                existing_data = []
+            else:
+                existing_data = json.loads(raw_content)
+        else:
+            existing_data = []
+
+        if not isinstance(existing_data, list):
+            raise StorageError("Stored SEO results must be a JSON array")
+
+        existing_data.append(data)
+
+        with open(RESULTS_FILE, "w", encoding="utf-8") as file:
+            json.dump(existing_data, file, ensure_ascii=False, indent=2)
+    except StorageError:
+        raise
+    except (OSError, json.JSONDecodeError) as error:
         raise StorageError("Failed to save SEO result") from error
 
 
@@ -29,7 +49,10 @@ def build_fallback_response(keyword: str) -> dict:
     return {
         "keyword": keyword,
         "title": f"{normalized}: Complete SEO Guide",
-        "meta_description": f"Learn everything about {keyword} in this SEO-friendly guide, including benefits, use cases, and best practices.",
+        "meta_description": (
+            f"Learn everything about {keyword} in this SEO-friendly guide, "
+            "including benefits, use cases, and best practices."
+        ),
         "outline": [
             f"What is {keyword}?",
             f"Key benefits of {keyword}",
@@ -40,24 +63,18 @@ def build_fallback_response(keyword: str) -> dict:
     }
 
 
-def parse_ai_output(keyword: str, content: str) -> dict:
-    lines = [line.strip() for line in content.splitlines() if line.strip()]
+def validate_ai_payload(keyword: str, payload: dict) -> dict:
+    title = payload.get("title", "").strip()
+    meta_description = payload.get("meta_description", "").strip()
+    outline = payload.get("outline", [])
 
-    title = ""
-    meta_description = ""
-    outline = []
-
-    for line in lines:
-        lower_line = line.lower()
-
-        if lower_line.startswith("title:"):
-            title = line.split(":", 1)[1].strip()
-        elif lower_line.startswith("meta description:"):
-            meta_description = line.split(":", 1)[1].strip()
-        elif line[0].isdigit() and "." in line:
-            outline.append(line.split(".", 1)[1].strip())
-
-    if not title or not meta_description or not outline:
+    if (
+        not title
+        or not meta_description
+        or not isinstance(outline, list)
+        or len(outline) == 0
+        or not all(isinstance(item, str) and item.strip() for item in outline)
+    ):
         return build_fallback_response(keyword)
 
     return {
@@ -69,28 +86,30 @@ def parse_ai_output(keyword: str, content: str) -> dict:
     }
 
 
-def request_ai_content(keyword: str) -> str:
+def request_ai_content(keyword: str) -> dict:
     try:
+        client = get_openai_client()
+
         prompt = f"""
-Generate SEO content for the keyword: "{keyword}".
+Generate SEO content for the keyword "{keyword}".
 
-Return exactly in this format:
+Return valid JSON with exactly these keys:
+- title
+- meta_description
+- outline
 
-Title: ...
-Meta Description: ...
-Outline:
-1. ...
-2. ...
-3. ...
-4. ...
+Rules:
+- outline must be an array of 4 strings
+- do not include markdown
+- do not include any extra keys
 """
 
         response = client.responses.create(
             model="gpt-5.4",
-            input=prompt
+            input=prompt,
         )
 
-        return response.output_text
+        return json.loads(response.output_text)
 
     except Exception as error:
         raise AIServiceError("AI generation is currently unavailable") from error
@@ -98,8 +117,8 @@ Outline:
 
 def generate_seo_content(keyword: str) -> dict:
     try:
-        content = request_ai_content(keyword)
-        result = parse_ai_output(keyword, content)
+        payload = request_ai_content(keyword)
+        result = validate_ai_payload(keyword, payload)
     except AIServiceError:
         result = build_fallback_response(keyword)
 
