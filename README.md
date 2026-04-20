@@ -4,7 +4,7 @@
 
 AI SEO Automation Tool is a FastAPI-based backend service that generates structured SEO content from a user-provided keyword.
 
-The API accepts a keyword and returns:
+The API accepts a keyword and optional language and returns:
 - SEO title
 - meta description
 - article outline
@@ -16,6 +16,7 @@ The project also stores generated results in a local JSON file and includes fall
 ## Features
 
 - Generate SEO content from a keyword
+- Support English and Ukrainian responses
 - Structured API response
 - Fallback content generation when AI is unavailable
 - Persistent JSON storage for generated results
@@ -93,13 +94,15 @@ Generates SEO content for a given keyword.
 Example request:
 ```json
 {
-  "keyword": "crm software"
+  "keyword": "crm software",
+  "language": "en"
 }
 ```
 Example response:
 ```json
 {
   "keyword": "crm software",
+  "language": "en",
   "title": "Crm software: Complete SEO Guide",
   "meta_description": "Learn everything about crm software in this SEO-friendly guide, including benefits, use cases, and best practices.",
   "outline": [
@@ -109,6 +112,14 @@ Example response:
     "Common mistakes to avoid with crm software"
   ],
   "used_fallback": true
+}
+```
+
+Ukrainian example request:
+```json
+{
+  "keyword": "crm система",
+  "language": "uk"
 }
 ```
 

@@ -24,7 +24,7 @@ def health_check():
 @app.post("/generate", response_model=SEOResponse)
 def generate_content(request: KeywordRequest):
     try:
-        result = generate_seo_content(request.keyword)
+        result = generate_seo_content(request.keyword, request.language)
         return result
     except StorageError as error:
         raise HTTPException(status_code=500, detail=str(error))
