@@ -1,46 +1,14 @@
 import json
-import os
 
-from dotenv import load_dotenv
 from openai import OpenAI
 
-from app.exceptions import AIServiceError, StorageError
-
-load_dotenv()
-
-RESULTS_FILE = "data/results.json"
+from app.config import get_config
+from app.exceptions import AIServiceError
+from app.repositories.seo_results import save_result
 
 
 def get_openai_client() -> OpenAI:
-    return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-
-def save_result(data: dict) -> None:
-    try:
-        os.makedirs("data", exist_ok=True)
-
-        if os.path.exists(RESULTS_FILE):
-            with open(RESULTS_FILE, "r", encoding="utf-8") as file:
-                raw_content = file.read().strip()
-
-            if not raw_content:
-                existing_data = []
-            else:
-                existing_data = json.loads(raw_content)
-        else:
-            existing_data = []
-
-        if not isinstance(existing_data, list):
-            raise StorageError("Stored SEO results must be a JSON array")
-
-        existing_data.append(data)
-
-        with open(RESULTS_FILE, "w", encoding="utf-8") as file:
-            json.dump(existing_data, file, ensure_ascii=False, indent=2)
-    except StorageError:
-        raise
-    except (OSError, json.JSONDecodeError) as error:
-        raise StorageError("Failed to save SEO result") from error
+    return OpenAI(api_key=get_config().openai_api_key)
 
 
 def build_fallback_response(keyword: str) -> dict:
@@ -105,7 +73,7 @@ Rules:
 """
 
         response = client.responses.create(
-            model="gpt-5.4",
+            model=get_config().openai_model,
             input=prompt,
         )
 

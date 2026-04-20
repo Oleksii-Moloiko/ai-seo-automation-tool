@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.exceptions import AIServiceError, StorageError
 from app.main import app
-from app.services import seo_generator
+from app.repositories import seo_results
 
 client = TestClient(app)
 
@@ -93,7 +93,7 @@ def test_generate_content_storage_error(mock_request_ai_content, mock_save_resul
 def test_save_result_handles_empty_results_file(tmp_path, monkeypatch):
     results_file = tmp_path / "results.json"
     results_file.write_text("", encoding="utf-8")
-    monkeypatch.setattr(seo_generator, "RESULTS_FILE", str(results_file))
+    monkeypatch.setenv("RESULTS_FILE", str(results_file))
 
     payload = {
         "keyword": "crm software",
@@ -108,7 +108,7 @@ def test_save_result_handles_empty_results_file(tmp_path, monkeypatch):
         "used_fallback": False,
     }
 
-    seo_generator.save_result(payload)
+    seo_results.save_result(payload)
 
     saved_data = json.loads(results_file.read_text(encoding="utf-8"))
 
