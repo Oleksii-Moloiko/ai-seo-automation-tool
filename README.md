@@ -1,104 +1,80 @@
 # AI SEO Automation Tool
 
-## Overview
+Two ways to get validated on-page SEO for your content:
 
-AI SEO Automation Tool is a FastAPI-based backend service that generates structured SEO content from a user-provided keyword.
+1. **`skill/` — SEO Pre-Publish Check.** An agent skill for Claude Code, Cursor, Codex CLI and similar. Audits a draft, scores it 0–100 with a deterministic Python validator, and returns severity-ranked findings with ready-to-paste fixes. Also generates validated title/meta/outline packs, single or in batch from CSV. Published on Agensi: https://agensi.io/skills/seo-pre-publish-check-score-fix-your-draft-before-it-goes-live
+2. **`app/` — FastAPI service.** A self-hosted HTTP API that generates an SEO title, meta description and outline from a keyword via OpenAI, with template fallback and JSON storage.
 
-The API accepts a keyword and optional language and returns:
-- SEO title
-- meta description
-- article outline
-
-The project also stores generated results in a local JSON file and includes fallback generation logic when the external AI provider is unavailable.
+Both support English and Ukrainian.
 
 ---
 
-## Features
+## SEO Pre-Publish Check (agent skill)
 
-- Generate SEO content from a keyword
-- Support English and Ukrainian responses
-- Structured API response
-- Fallback content generation when AI is unavailable
-- Persistent JSON storage for generated results
-- Request and response validation with Pydantic
-- API testing with pytest
+### What it does
 
----
+| Mode | Input | Output |
+|---|---|---|
+| **audit** | Markdown, HTML or plain-text draft + primary keyword | Score, grade, findings by severity, replacement title/meta/headings |
+| **generate** | Keyword (+ optional audience, intent, brand) | 3 scored titles, 2 scored metas, 4–6 item H2 outline |
+| **batch** | CSV with `keyword,language` | `seo_pack_results.csv` with one validated pack per row |
 
-## Tech Stack
+The validator (`skill/scripts/seo_check.py`) is standard-library Python with no network access. It measures:
 
-- Python 3.11
-- FastAPI
-- Pydantic
-- OpenAI Python SDK
-- pytest
-- Uvicorn
-- python-dotenv
+- title and meta description width in **pixels**, not characters (Google truncates at ~600 px / ~920 px)
+- keyword in title, meta, H1 and the first 100 words; keyword density
+- one H1, at least 3 H2s, no skipped heading levels, no generic or duplicate headings
+- word count, average sentence length, oversized paragraphs
+- internal and external links, image alt text, secondary keywords
+- Cyrillic share for Ukrainian content
 
----
+Keyword matching is inflection-aware, so «SEO оптимізацію сайту» counts for the keyword «SEO оптимізація сайту».
 
-## Project Structure
+### Use it with your agent
+
+Load the skill from Agensi (link above), or point your agent at the `skill/` folder, then ask:
+
+```
+Run an SEO pre-publish check on draft.md for the keyword "ai seo tools"
+```
+
+### Run the validator directly
 
 ```bash
-ai-seo-automation-tool/
-├── app/
-│   ├── main.py
-│   ├── exceptions.py
-│   ├── schemas/
-│   │   └── seo.py
-│   └── services/
-│       └── seo_generator.py
-├── data/
-│   └── results.json
-├── tests/
-│   └── test_api.py
-├── .env
-├── .gitignore
-├── README.md
-└── requirements.txt
+# audit a draft
+python3 skill/scripts/seo_check.py audit \
+  --file skill/examples/sample_draft.md \
+  --keyword "ai seo tools" --language en --json seo_report.json
+
+# score generated candidates
+python3 skill/scripts/seo_check.py validate seo_candidates.json --json seo_validation.json
+
+# batch export
+python3 skill/scripts/seo_check.py export seo_validation.json --csv seo_pack_results.csv
 ```
+
+Exit code is `0` when every check passes, `1` when any check fails, `2` on input errors. See `skill/examples/output.json` for a full report and `skill/references/seo_rules.md` for thresholds and scoring weights.
 
 ---
 
-## How It Works
-- User sends a keyword to the /generate endpoint
-- The service attempts to generate SEO content via AI
-- If AI is unavailable, fallback SEO content is generated
-- The result is saved to data/results.json
-- The API returns a structured JSON response
+## FastAPI service (self-hosted API)
 
----
-
-## API Endpoints
-```
-GET /
-```
-Returns a basic service status message.
-```
-GET /health
-```
-Returns service health status.
-
-Example response:
-```json
-{
-  "status": "ok"
-}
-```
+### Endpoints
 
 ```
-POST /generate
+GET  /          service status message
+GET  /health    {"status": "ok"}
+POST /generate  SEO content for a keyword
 ```
-Generates SEO content for a given keyword.
 
 Example request:
+
 ```json
-{
-  "keyword": "crm software",
-  "language": "en"
-}
+{ "keyword": "crm software", "language": "en" }
 ```
+
 Example response:
+
 ```json
 {
   "keyword": "crm software",
@@ -115,85 +91,80 @@ Example response:
 }
 ```
 
-Ukrainian example request:
-```json
-{
-  "keyword": "crm система",
-  "language": "uk"
-}
-```
+`language` accepts `en` or `uk`. `used_fallback` is `true` when the OpenAI call was unavailable and the template response was returned instead.
 
----
+### How it works
 
-## Installation
+1. A keyword is posted to `/generate`.
+2. The service asks OpenAI for a title, meta description and 4-item outline, then validates the payload.
+3. If the API key is missing, the call fails, or the payload is malformed, a template fallback is returned.
+4. The result is appended to `data/results.json` and returned as JSON.
 
-1. Clone the repository
+### Installation
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-seo-automation-tool.git
+git clone https://github.com/Oleksii-Moloiko/ai-seo-automation-tool.git
 cd ai-seo-automation-tool
-```
-2. Create and activate virtual environment
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-3. Install dependencies
-```bash
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
-4. Create .env
-```bash
+
+Create `.env`:
+
+```
 OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-5.4          # optional
+RESULTS_FILE=data/results.json # optional
 ```
-5. Run the server
+
+Run:
+
 ```bash
-python3.11 -m uvicorn app.main:app --reload
-```
-6. Open Swagger docs
-```
-http://127.0.0.1:8000/docs
+python3 -m uvicorn app.main:app --reload
+# Swagger UI: http://127.0.0.1:8000/docs
 ```
 
----
+### Tests
 
-## Running Tests
 ```bash
-python3.11 -m pytest -v
+python3 -m pytest -v
 ```
 
 ---
 
-## Error Handling
+## Project structure
 
-The project includes:
+```
+ai-seo-automation-tool/
+├── skill/                      # agent skill (published on Agensi)
+│   ├── SKILL.md                # instructions for the agent
+│   ├── scripts/seo_check.py    # deterministic validator
+│   ├── references/seo_rules.md # thresholds, weights, language notes
+│   └── examples/               # sample draft, CSV input, JSON report
+├── app/                        # FastAPI service
+│   ├── main.py
+│   ├── config.py
+│   ├── exceptions.py
+│   ├── schemas/seo.py
+│   ├── services/seo_generator.py
+│   └── repositories/seo_results.py
+├── tests/test_api.py
+├── data/results.json           # created at runtime, git-ignored
+├── requirements.txt
+└── README.md
+```
 
-- custom exceptions for AI service failures
-- custom exceptions for storage failures
-- fallback response generation
-- proper HTTP 500 handling for storage-related errors
+## Tech stack
 
----
+Python 3.11, FastAPI, Pydantic, OpenAI Python SDK, Uvicorn, python-dotenv, pytest. The skill's validator has no dependencies beyond the standard library (Python 3.9+).
 
-## Future Improvements
-- Add batch keyword processing
-- Save results to Google Sheets
-- Add Docker support
-- Add logging
-- Add prompt templates
-- Add authentication
-- Add database storage instead of local JSON
+## Roadmap
 
----
+- More languages in the skill's language-specific checks
+- Real font metrics for pixel widths
+- Batch keyword processing in the API
+- Docker support
 
-## Why This Project Matters
+## Support
 
-This project demonstrates:
-
-- backend API design
-- third-party AI integration
-- request/response validation
-- fallback handling
-- persistent storage
-- automated API testing
-
-It is a good example of a practical automation service that could be useful for SEO teams and content operations.
+Open an issue: https://github.com/Oleksii-Moloiko/ai-seo-automation-tool/issues
