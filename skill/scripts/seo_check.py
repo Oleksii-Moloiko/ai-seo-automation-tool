@@ -120,6 +120,16 @@ def _stems(text: str) -> list[str]:
     return [_stem(w) for w in words(text)]
 
 
+def _stem_eq(t: str, k: str) -> bool:
+    """Two stems match when equal, or when one extends the other and the shorter one
+    is long enough to be meaningful (prevents 'a' matching 'ai')."""
+    if t == k:
+        return True
+    if len(k) > 3 and t.startswith(k):
+        return True
+    return len(t) > 3 and k.startswith(t)
+
+
 def keyword_matches(text: str, keyword: str) -> list[int]:
     """Word offsets where the keyword occurs, allowing inflected forms."""
     tw, kw = _stems(text), _stems(keyword)
@@ -128,13 +138,26 @@ def keyword_matches(text: str, keyword: str) -> list[int]:
     hits = []
     n = len(kw)
     for i in range(len(tw) - n + 1):
-        if all(tw[i + j].startswith(kw[j]) or kw[j].startswith(tw[i + j]) for j in range(n)):
+        if all(_stem_eq(tw[i + j], kw[j]) for j in range(n)):
             hits.append(i)
     return hits
 
 
 def contains_keyword(text: str, keyword: str) -> bool:
     return bool(keyword_matches(text, keyword))
+
+
+def contains_keyword_loose(text: str, keyword: str) -> bool:
+    """Heading-friendly match: every keyword stem appears somewhere in the text, any order.
+
+    'Чому сайт без SEO оптимізації' matches 'seo оптимізація сайту'.
+    """
+    if contains_keyword(text, keyword):
+        return True
+    tw, kw = _stems(text), _stems(keyword)
+    if not kw:
+        return False
+    return all(any(_stem_eq(t, k) for t in tw) for k in kw)
 
 
 def keyword_position(text: str, keyword: str) -> float | None:
@@ -190,6 +213,13 @@ class _HTMLExtractor(HTMLParser):
         self._skip = 0
         self._block: list[str] = []
 
+    def _space(self) -> None:
+        # Tag boundaries separate words: "Пам'ять, що<br>залишається" must not glue.
+        if self._in_title or self._heading_level:
+            self._buf.append(" ")
+        else:
+            self._block.append(" ")
+
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
         if tag in ("script", "style", "noscript", "nav", "footer", "header"):
@@ -197,6 +227,7 @@ class _HTMLExtractor(HTMLParser):
             return
         if self._skip:
             return
+        self._space()
         if tag == "title":
             self._in_title = True
             self._buf = []
@@ -220,6 +251,7 @@ class _HTMLExtractor(HTMLParser):
             return
         if self._skip:
             return
+        self._space()
         if tag == "title":
             self._in_title = False
             self.doc.title = normalize("".join(self._buf))
@@ -474,7 +506,7 @@ def check_headings(rep: Report, headings: list[tuple[int, str]], keyword: str) -
     elif len(h1s) > 1:
         rep.add("h1_multiple", "fail", "high", f"{len(h1s)} H1 headings found.", "Keep exactly one H1; demote the rest to H2.")
     else:
-        if contains_keyword(h1s[0], keyword):
+        if contains_keyword_loose(h1s[0], keyword):
             rep.ok("h1_missing", "critical", "One H1 with keyword")
         else:
             rep.add("h1_keyword", "warn", "high", "H1 does not contain the primary keyword.",
@@ -670,6 +702,7 @@ PENALTY = {
     "generic": 15,
     "count": 20,
     "stacked": 10,
+    "near_limit": 5,
     "empty": 100,
 }
 
@@ -684,6 +717,8 @@ def score_candidate(text: str, kind: str, keyword: str, language: str, seen: set
     if kind == "title":
         if px > TITLE_PX_MAX or chars > TITLE_CHARS_MAX:
             failures.append("too_wide")
+        elif px > TITLE_PX_WARN:
+            failures.append("near_limit")
         elif px < TITLE_PX_MIN or chars < TITLE_CHARS_MIN:
             failures.append("too_narrow")
         if text.count("|") >= 2:
@@ -691,6 +726,8 @@ def score_candidate(text: str, kind: str, keyword: str, language: str, seen: set
     else:
         if px > META_PX_MAX or chars > META_CHARS_MAX:
             failures.append("too_wide")
+        elif px > META_PX_WARN:
+            failures.append("near_limit")
         elif px < META_PX_MIN or chars < META_CHARS_MIN:
             failures.append("too_narrow")
     if not contains_keyword(text, keyword):
@@ -716,7 +753,7 @@ def score_outline(outline: list, keyword: str, language: str) -> dict:
         failures.append("generic")
     if len({fold(x) for x in items}) != len(items):
         failures.append("duplicate")
-    if items and not any(contains_keyword(x, keyword) for x in items):
+    if items and not any(contains_keyword_loose(x, keyword) for x in items):
         failures.append("keyword_missing")
     if language == "uk" and items and cyrillic_ratio(" ".join(items)) < CYRILLIC_MIN_RATIO:
         failures.append("not_cyrillic")

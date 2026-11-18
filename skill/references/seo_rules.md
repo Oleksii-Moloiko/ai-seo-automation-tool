@@ -22,11 +22,12 @@ Angles that work: how-to ("How to X in Y steps"), number list ("7 X that Y"), qu
 | Characters | 70-160 | Secondary guard |
 | Keyword | present once, naturally | Google bolds matching words in the snippet |
 | Call to action or promise | present | A meta is an ad for the click, not a summary |
+| Near the limit | validate marks candidates above 580 px (title) or 900 px (meta) as `near_limit`, a soft 5-point penalty | Width model is approximate; keep a margin |
 | No duplicate of the title | must differ | Duplicates waste the snippet |
 
 ## Headings
 
-- Exactly one H1. It may differ from the title tag but must contain the keyword or a close variant.
+- Exactly one H1. It may differ from the title tag but must contain the keyword or a close variant. For H1 and outline headings the validator accepts the keyword's words in any order and any inflection; title and meta need the phrase in order.
 - At least 3 H2 sections. 4-6 is the usual sweet spot for 800-1500 words.
 - No level skipping (H2 followed by H4).
 - No generic headings: Introduction, Overview, Conclusion, Summary, Final thoughts, Вступ, Огляд, Висновок, Висновки, Підсумок. Name the actual benefit or step instead.
