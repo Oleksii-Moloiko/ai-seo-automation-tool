@@ -1,0 +1,166 @@
+{
+  "mode": "audit",
+  "file": "examples/sample_draft.md",
+  "keyword": "ai seo tools",
+  "language": "en",
+  "score": 92,
+  "grade": "A",
+  "status": "FAIL",
+  "title": {
+    "text": "AI SEO Tools: 7 Options Worth Paying For in 2026",
+    "pixel_width": 393,
+    "chars": 48,
+    "source": "document"
+  },
+  "meta": {
+    "text": "Compare the best AI SEO tools for content teams. See what each one automates, what it costs, and which fits a small team. Pick yours in 10 minutes.",
+    "pixel_width": 813,
+    "chars": 147
+  },
+  "headings": {
+    "h1": [
+      "AI SEO Tools: 7 Options Worth Paying For in 2026"
+    ],
+    "h2_count": 5,
+    "total": 6
+  },
+  "stats": {
+    "word_count": 288,
+    "keyword_count": 5,
+    "keyword_density": 1.53,
+    "avg_sentence_words": 13.7,
+    "long_paragraphs": 0,
+    "internal_links": 1,
+    "external_links": 1,
+    "images": 1,
+    "images_without_alt": 0
+  },
+  "checks": [
+    {
+      "id": "word_count",
+      "status": "fail",
+      "severity": "medium",
+      "detail": "288 words; target is at least 600.",
+      "fix_hint": "Expand the thinnest H2 sections or add a FAQ."
+    },
+    {
+      "id": "h1_missing",
+      "status": "pass",
+      "severity": "critical",
+      "detail": "One H1 with keyword",
+      "fix_hint": ""
+    },
+    {
+      "id": "keyword_in_intro",
+      "status": "pass",
+      "severity": "high",
+      "detail": "Keyword within first 100 words",
+      "fix_hint": ""
+    },
+    {
+      "id": "meta_keyword",
+      "status": "pass",
+      "severity": "high",
+      "detail": "Keyword present",
+      "fix_hint": ""
+    },
+    {
+      "id": "meta_width",
+      "status": "pass",
+      "severity": "high",
+      "detail": "813px / 147 chars",
+      "fix_hint": ""
+    },
+    {
+      "id": "title_keyword",
+      "status": "pass",
+      "severity": "high",
+      "detail": "Keyword present near the start",
+      "fix_hint": ""
+    },
+    {
+      "id": "title_width",
+      "status": "pass",
+      "severity": "high",
+      "detail": "393px / 48 chars",
+      "fix_hint": ""
+    },
+    {
+      "id": "duplicate_headings",
+      "status": "pass",
+      "severity": "medium",
+      "detail": "All headings unique",
+      "fix_hint": ""
+    },
+    {
+      "id": "generic_headings",
+      "status": "pass",
+      "severity": "medium",
+      "detail": "No generic headings",
+      "fix_hint": ""
+    },
+    {
+      "id": "h2_count",
+      "status": "pass",
+      "severity": "medium",
+      "detail": "5 H2 sections",
+      "fix_hint": ""
+    },
+    {
+      "id": "heading_skip",
+      "status": "pass",
+      "severity": "medium",
+      "detail": "No level skips",
+      "fix_hint": ""
+    },
+    {
+      "id": "keyword_density_low",
+      "status": "pass",
+      "severity": "medium",
+      "detail": "Density 1.5% (5 uses)",
+      "fix_hint": ""
+    },
+    {
+      "id": "external_links",
+      "status": "pass",
+      "severity": "low",
+      "detail": "1 external link(s)",
+      "fix_hint": ""
+    },
+    {
+      "id": "image_alt",
+      "status": "pass",
+      "severity": "low",
+      "detail": "All images have alt text",
+      "fix_hint": ""
+    },
+    {
+      "id": "internal_links",
+      "status": "pass",
+      "severity": "low",
+      "detail": "1 internal link(s)",
+      "fix_hint": ""
+    },
+    {
+      "id": "meta_equals_title",
+      "status": "pass",
+      "severity": "low",
+      "detail": "Distinct from title",
+      "fix_hint": ""
+    },
+    {
+      "id": "paragraph_length",
+      "status": "pass",
+      "severity": "low",
+      "detail": "No oversized paragraphs",
+      "fix_hint": ""
+    },
+    {
+      "id": "sentence_length",
+      "status": "pass",
+      "severity": "low",
+      "detail": "Average sentence 14 words",
+      "fix_hint": ""
+    }
+  ]
+}
